@@ -1,18 +1,16 @@
 import NextAuth from "next-auth";
-import GitHub from "next-auth/providers/github";
 import Credentials from "next-auth/providers/credentials";
-import { prisma } from "@/lib/prisma";
+import GitHub from "next-auth/providers/github";
+import { prisma } from "./lib/prisma";
 import bcrypt from "bcryptjs";
+import { authConfig } from "./auth.config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   providers: [
     GitHub,
     Credentials({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
+      ...authConfig.providers[1],
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
@@ -29,7 +27,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!passwordMatch) return null;
 
-        return user;
+        return {
+          id: String(user.id),
+          name: user.name,
+          email: user.email,
+          image: user.avatar,
+          role: user.role,
+        };
       },
     }),
   ],
@@ -39,7 +43,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const existing = await prisma.user.findUnique({
           where: { email: user.email },
         });
-
         if (!existing) {
           await prisma.user.create({
             data: {
@@ -52,20 +55,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return true;
     },
-    async session({ session }) {
-      const dbUser = await prisma.user.findUnique({
-        where: { email: session.user.email },
-      });
-
-      if (dbUser) {
-        session.user.id = String(dbUser.id);
-        session.user.role = dbUser.role;
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
       }
-
+      return token;
+    },
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id;
+        session.user.role = token.role;
+      }
       return session;
     },
-  },
-  pages: {
-    signIn: "/login",
   },
 });

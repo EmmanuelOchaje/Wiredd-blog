@@ -12,7 +12,6 @@ model User {
   name      String
   email     String   @unique
   password  String?
-  avatar    String?
   bio       String?
   role      Role     @default(USER)
   createdAt DateTime @default(now())
@@ -24,25 +23,23 @@ model User {
 }
 
 model Post {
-  id          Int      @id @default(autoincrement())
-  title       String
-  slug        String   @unique
-  content     String   @db.LongText
-  excerpt     String?
-  cover       String?
-  published   Boolean  @default(false)
-  views       Int      @default(0)
-  readTime    Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  title     String
+  slug      String   @unique
+  content   String   @db.LongText
+  published Boolean  @default(false)
+  views     Int      @default(0)
+  readTime  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  author      User     @relation(fields: [authorId], references: [id])
-  authorId    Int
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  Int
 
-  tags        TagsOnPosts[]
-  comments    Comment[]
-  likes       Like[]
-  bookmarks   Bookmark[]
+  tags      TagsOnPosts[]
+  comments  Comment[]
+  likes     Like[]
+  bookmarks Bookmark[]
 }
 
 model Tag {

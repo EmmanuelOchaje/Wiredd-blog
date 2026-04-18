@@ -1,8 +1,7 @@
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import SessionWrapper from "./components/sessionWrapper";
-import Header from "./components/header";
-import Footer from "./components/footer";
+import ThemeProvider from "./components/themeProvider";
 
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
 
@@ -13,15 +12,13 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={`${dmSans.variable} text-white antialiased`}>
-        <SessionWrapper>
-          <Header />
-          <main className="min-h-screen max-w-6xl mx-auto px-4 py-8">
-            {children}
-          </main>
-          <Footer />
-        </SessionWrapper>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${dmSans.variable} font-sans bg-white dark:bg-[#18181b] text-neutral-900 dark:text-white antialiased`}
+      >
+        <ThemeProvider>
+          <SessionWrapper>{children}</SessionWrapper>
+        </ThemeProvider>
       </body>
     </html>
   );
