@@ -2,42 +2,60 @@
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function WritePage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editSlug = searchParams.get("edit");
+
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(!!editSlug);
 
   const editor = useEditor({
-    immediatelyRender: false,
     extensions: [StarterKit],
     content: "<p>Start writing...</p>",
+    immediatelyRender: false,
   });
+
+  useEffect(() => {
+    if (!editSlug || !editor) return;
+    fetch(`/api/posts/${editSlug}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setTitle(data.title);
+        editor.commands.setContent(data.content);
+        setFetching(false);
+      });
+  }, [editSlug, editor]);
 
   async function handleSubmit(published) {
     setLoading(true);
     const content = editor.getHTML();
-    const slug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
+    const slug =
+      editSlug ||
+      title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
 
-    const res = await fetch("/api/posts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, content, slug, published }),
-    });
+    const res = await fetch(
+      editSlug ? `/api/posts/${editSlug}` : "/api/posts",
+      {
+        method: editSlug ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content, slug, published }),
+      },
+    );
 
     const data = await res.json();
     setLoading(false);
 
-    if (res.ok) {
-      router.push(published ? `/blog/${data.slug}` : "/dashboard");
-    }
+    if (res.ok) router.push(published ? `/blog/${data.slug}` : "/dashboard");
   }
 
   if (!session)
@@ -51,10 +69,15 @@ export default function WritePage() {
       </div>
     );
 
+  if (fetching)
+    return (
+      <div className="text-center py-20 text-neutral-400">Loading post...</div>
+    );
+
   return (
     <div className="max-w-3xl mx-auto py-10 space-y-6">
       <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
-        New Post
+        {editSlug ? "Edit Post" : "New Post"}
       </h1>
 
       <input
@@ -106,7 +129,7 @@ export default function WritePage() {
       </div>
 
       {/* Editor */}
-      <div className="min-h-[300px] border border-neutral-200 dark:border-neutral-400 rounded-lg p-4 prose prose-neutral dark:prose-invert max-w-none focus:outline-none">
+      <div className="min-h-[300px] border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 prose prose-neutral dark:prose-invert max-w-none">
         <EditorContent editor={editor} />
       </div>
 
@@ -124,7 +147,7 @@ export default function WritePage() {
           disabled={loading || !title}
           className="text-sm px-4 py-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-semibold rounded-lg hover:opacity-90 transition-all disabled:opacity-40"
         >
-          {loading ? "Publishing..." : "Publish"}
+          {loading ? "Saving..." : "Publish"}
         </button>
       </div>
     </div>

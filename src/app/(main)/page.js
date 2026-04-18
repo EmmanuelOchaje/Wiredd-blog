@@ -49,15 +49,25 @@ export default async function Home() {
             <article key={post.id} className="group flex flex-col gap-3">
               {/* Gradient */}
               <Link href={`/blog/${post.slug}`}>
-                <div
-                  style={{
-                    background: `linear-gradient(135deg, ${getGradient(post.title)[0]}, ${getGradient(post.title)[1]})`,
-                  }}
-                  className="w-full h-52 rounded-xl overflow-hidden group-hover:opacity-90 transition-opacity duration-500 flex items-center justify-center"
-                >
-                  <span className="text-7xl font-bold text-white/30 select-none">
-                    {post.title?.charAt(0).toUpperCase()}
-                  </span>
+                <div className="w-full h-52 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                  {post.cover ? (
+                    <img
+                      src={post.cover}
+                      alt={post.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div
+                      className="w-full h-full flex items-center justify-center"
+                      style={{
+                        background: `hsl(${(post.title?.charCodeAt(0) * 10) % 360}, 60%, 40%)`,
+                      }}
+                    >
+                      <span className="text-7xl font-bold text-white/30 select-none">
+                        {post.title?.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </Link>
 

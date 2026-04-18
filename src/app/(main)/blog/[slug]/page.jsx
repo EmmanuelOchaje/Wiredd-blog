@@ -1,33 +1,65 @@
-import { prisma } from "../../../../lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import LikeButton from "../../../components/button";
+import Comments from "../../../components/comments";
+
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const post = await prisma.post.findUnique({
+    where: { slug },
+    include: { author: { select: { name: true } } },
+  });
+
+  if (!post) return { title: "Post not found" };
+
+  return {
+    title: `${post.title} — Wiredd`,
+    description: post.title,
+    openGraph: {
+      title: post.title,
+      description: post.title,
+      images: post.cover ? [post.cover] : [],
+      type: "article",
+      authors: [post.author?.name],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      images: post.cover ? [post.cover] : [],
+    },
+  };
+}
 
 export default async function PostPage({ params }) {
   const { slug } = await params;
+  const session = await auth();
+  const isLoggedIn = !!session;
 
   const post = await prisma.post.findUnique({
     where: { slug },
     include: {
       author: { select: { name: true, bio: true } },
       tags: { include: { tag: true } },
+      _count: { select: { likes: true, comments: true } },
+      likes: isLoggedIn
+        ? {
+            where: { user: { email: session.user.email } },
+          }
+        : false,
     },
   });
 
   if (!post || !post.published) return notFound();
 
-  // increment views
   await prisma.post.update({
     where: { slug },
     data: { views: { increment: 1 } },
   });
 
-  const session = await auth();
-  const isLoggedIn = !!session;
-
   return (
     <article className="max-w-3xl mx-auto px-4 py-10">
-      {/* Tags */}
       {post.tags.length > 0 && (
         <div className="flex items-center gap-2 mb-4">
           {post.tags.map(({ tag }) => (
@@ -40,14 +72,10 @@ export default async function PostPage({ params }) {
           ))}
         </div>
       )}
-
-      {/* Title */}
       <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-white leading-tight mb-4">
         {post.title}
       </h1>
-
-      {/* Meta */}
-      <div className="flex items-center gap-3 mb-8 pb-8 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="flex items-center gap-3 mb-6 pb-6 border-b border-neutral-200 dark:border-neutral-800">
         <div>
           <p className="text-sm font-medium text-neutral-900 dark:text-white">
             {post.author?.name}
@@ -63,8 +91,16 @@ export default async function PostPage({ params }) {
           </p>
         </div>
       </div>
-
-      {/* Cover */}
+      <div className="flex items-center gap-4 mb-8">
+        <LikeButton
+          slug={slug}
+          initialLikes={post._count.likes}
+          initialLiked={post.likes?.length > 0}
+        />
+        <span className="text-sm text-neutral-400">
+          {post._count.comments} comments
+        </span>
+      </div>
       {post.cover && (
         <div className="w-full h-72 md:h-96 rounded-2xl overflow-hidden mb-10">
           <img
@@ -74,15 +110,12 @@ export default async function PostPage({ params }) {
           />
         </div>
       )}
-
-      {/* Content */}
       <div className="relative">
         <div
           className={`prose prose-neutral dark:prose-invert max-w-none text-sm leading-relaxed ${!isLoggedIn ? "line-clamp-[12] pointer-events-none select-none" : ""}`}
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
 
-        {/* Soft gate */}
         {!isLoggedIn && (
           <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-white dark:from-[#18181b] to-transparent flex flex-col items-center justify-end pb-4">
             <p className="text-sm font-semibold text-neutral-900 dark:text-white mb-3">
@@ -105,15 +138,8 @@ export default async function PostPage({ params }) {
           </div>
         )}
       </div>
-
-      {/* Author bio */}
       {isLoggedIn && post.author?.bio && (
         <div className="mt-16 pt-8 border-t border-neutral-200 dark:border-neutral-800 flex items-start gap-4">
-          <img
-            src={post.author?.avatar || "/default-avatar.png"}
-            alt={post.author?.name}
-            className="w-12 h-12 rounded-full object-cover"
-          />
           <div>
             <p className="text-sm font-semibold text-neutral-900 dark:text-white">
               {post.author?.name}
@@ -122,6 +148,7 @@ export default async function PostPage({ params }) {
           </div>
         </div>
       )}
+      {isLoggedIn && <Comments slug={slug} />}
     </article>
   );
 }

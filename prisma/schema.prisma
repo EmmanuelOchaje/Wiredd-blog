@@ -27,6 +27,7 @@ model Post {
   title     String
   slug      String   @unique
   content   String   @db.LongText
+  cover     String?
   published Boolean  @default(false)
   views     Int      @default(0)
   readTime  Int?

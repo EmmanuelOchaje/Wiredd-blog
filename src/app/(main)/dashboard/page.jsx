@@ -126,7 +126,9 @@ function DeleteButton({ postId }) {
         const { prisma } = await import("@/lib/prisma");
         await prisma.post.delete({ where: { id: postId } });
         const { revalidatePath } = await import("next/cache");
+        const { redirect } = await import("next/navigation");
         revalidatePath("/dashboard");
+        redirect("/dashboard");
       }}
     >
       <button
