@@ -5,8 +5,9 @@ import StarterKit from "@tiptap/starter-kit";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function WritePage() {
+function WritePage() {
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -151,5 +152,17 @@ export default function WritePage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function WritePageWrapper() {
+  return (
+    <Suspense
+      fallback={
+        <div className="text-center py-20 text-neutral-400">Loading...</div>
+      }
+    >
+      <WritePage />
+    </Suspense>
   );
 }
